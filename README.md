@@ -1,4 +1,4 @@
-# Stereo Vision Pipeline: Feature Matching, Epipolar Geometry, and Relative Orientation
+# Image Rectification & Stereo Matching
 
 This project computes stereo correspondences and uses them to estimate epipolar geometry and camera relative orientation.
 
@@ -173,3 +173,96 @@ python3 -m pip install opencv-python
 
 - The epipolar line colors are randomly generated each run, so visualization colors may differ.
 - `t` from essential matrix decomposition is a direction only, not absolute translation magnitude.
+
+## How to Create a Pull Request (PR) to This Repository
+
+Use these steps when you want to contribute changes safely through a PR instead of pushing directly to `main`.
+
+1. Go to the project folder:
+
+```bash
+cd /Users/karthiknair/Downloads/stereo_project
+```
+
+2. Make sure your local `main` is up to date:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+3. Create a new feature branch:
+
+```bash
+git checkout -b feature/<short-description>
+```
+
+Example:
+
+```bash
+git checkout -b feature/epipolar-geometry-docs
+```
+
+4. Make your code/documentation changes.
+
+5. Stage files:
+
+```bash
+git add .
+```
+
+6. Commit with a clear message:
+
+```bash
+git commit -m "Add epipolar geometry pipeline documentation"
+```
+
+7. Push the branch to GitHub:
+
+```bash
+git push -u origin feature/<short-description>
+```
+
+8. Open GitHub and create the PR:
+- Open: `https://github.com/karthik-nair-20/PCV-Image-Rectification-Stereo-Matching`
+- GitHub usually shows a **Compare & pull request** button after push.
+- If not, go to **Pull requests** -> **New pull request**.
+- Set:
+  - `base`: `main`
+  - `compare`: `feature/<short-description>`
+- Add PR title and description (what changed, why, any test output).
+- Click **Create pull request**.
+
+9. Address review comments:
+- Make requested edits locally on the same branch.
+- Commit and push again:
+
+```bash
+git add .
+git commit -m "Address PR review comments"
+git push
+```
+
+10. Merge after approval:
+- Use **Squash and merge** (recommended for clean history), or project-preferred merge strategy.
+- Delete the branch on GitHub after merge.
+
+11. Sync local `main` after merge:
+
+```bash
+git checkout main
+git pull origin main
+git branch -d feature/<short-description>
+```
+
+### If your push is rejected (`fetch first`)
+
+Rebase your branch on latest remote `main` and push again:
+
+```bash
+git fetch origin
+git rebase origin/main
+git push --force-with-lease
+```
+
+Use `--force-with-lease` only on your feature branch, not on `main`.
