@@ -3,14 +3,16 @@
 This project computes stereo correspondences and uses them to estimate epipolar geometry and camera relative orientation.
 
 The pipeline currently has two parts:
-- Part 1: Feature extraction and point matching (`feature_matching.py`)
-- Part 2: Fundamental matrix, epipolar lines, and pose estimation (`epipolar_geometry.py`)
+- Part 1a+b: Dense disparity map via NCC stereo matching (stereo_matching.py)
+- Part 1c: Feature extraction and point matching (`feature_matching.py`)
+- Part 1c: Fundamental matrix, epipolar lines, and pose estimation (`epipolar_geometry.py`)
 
 `main.py` orchestrates both parts end-to-end.
 
 ## Project Structure
 
-- `main.py`: Entry point; runs Part 1 then Part 2.
+- `main.py`: Entry point; runs Part 1a+b then Part 1c.
+- `stereo_matching.py`: NCC block matching; produces dense disparity maps.
 - `feature_matching.py`: Detects and matches keypoints between left/right images.
 - `epipolar_geometry.py`: Estimates `F`, visualizes epipolar lines, computes `E`, `R`, `t` direction, and saves results.
 - `images/left.png`, `images/right.png`: Input stereo pair.
@@ -76,15 +78,39 @@ python3 main.py
 
 The script will:
 1. Load images
-2. Extract/match features
-3. Compute `F`
-4. Draw epipolar lines
-5. Estimate `R` and `t` direction
-6. Save all outputs inside `images/`
+2. Compute NCC disparity map
+3. Extract/match features
+4. Compute `F`
+5. Draw epipolar lines
+6. Estimate `R` and `t` direction
+7. Save all outputs inside `images/`
 
 ## Part-Wise Documentation
+## Part 1a+b: Stereo Matching (`stereo_matching.py`)
+Purpose: Compute a dense disparity map using NCC (Normalized Cross-Correlation) block matching.
+Algorithm
+NCC block matching: for every pixel in the left image, the best-matching window along the same horizontal scanline in the right image is found by maximizing the NCC score across a search range `[min_disparity, max_disparity]`.
 
-## Part 1: Feature Matching (`feature_matching.py`)
+### Workflow
+
+1. Load both images and convert to grayscale.
+2. For each disparity `d` in `[min_disparity, max_disparity)`, shift the right image by `d` pixels and compute the NCC score at every pixel using `cv2.boxFilter` for efficiency.
+3. Winner-takes-all: assign each pixel the disparity with the highest NCC score.
+4. Save disparity outputs.
+
+### Parameters (defaults)
+- `window_size=11`: correlation window side length (odd integer)
+- ` min_disparity=0`: smallest disparity searched (pixels)
+- ` max_disparity=80`: largest disparity searched (pixels); increase for close objects or wide baselines
+- `do_lr_check=True`: apply left-right consistency filtering
+
+### Output of Part 1a+b
+- `disparity_raw.png`:grayscale disparity map (brighter = closer); this is the primary deliverable
+- `disparity_color.png`:JET colormap with unreliable pixels masked grey
+- `disparity_color_nocheck.png`:JET colormap without masking
+
+
+## Part 1c: Feature Matching (`feature_matching.py`)
 
 Purpose: Generate point correspondences between the left and right images.
 
@@ -100,7 +126,7 @@ Purpose: Generate point correspondences between the left and right images.
 ### Output of Part 1
 - `pts_left`, `pts_right` as `np.float32` arrays used directly in Part 2.
 
-## Part 2: Epipolar Geometry and Relative Orientation (`epipolar_geometry.py`)
+## Part 1c: Epipolar Geometry and Relative Orientation (`epipolar_geometry.py`)
 
 Purpose: Use correspondences from Part 1 to recover stereo geometry.
 
@@ -128,10 +154,14 @@ Purpose: Use correspondences from Part 1 to recover stereo geometry.
 ## Output Files (Saved in `images/`)
 
 Visual outputs:
+- `disparity_raw.png`
+- `disparity_color.png`
+- `disparity_color_nocheck.png`
 - `epilines_left.png`
 - `epilines_right.png`
 - `epilines_left_points.png`
 - `epilines_right_points.png`
+
 
 Matrix/vector outputs:
 - `fundamental_matrix_F.txt`
@@ -146,6 +176,7 @@ Masks:
 ## Console Output You Should See
 
 `main.py` prints:
+- Stereo matching progress and disparity statistics
 - Left/right point array shapes
 - Fundamental matrix `F`
 - Essential matrix `E`
