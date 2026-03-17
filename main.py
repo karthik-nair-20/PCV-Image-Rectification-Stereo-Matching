@@ -1,6 +1,7 @@
 from feature_matching import extract_and_match_features
 from epipolar_geometry import compute_epipolar_geometry
 from stereo_matching import compute_disparity_map
+from rectification import rectify_stereo_images
 
 if __name__ == "__main__":
     left = "images/left.png"
@@ -25,3 +26,18 @@ if __name__ == "__main__":
     print("Essential matrix E:\n", results["E"])
     print("Rotation R:\n", results["R"])
     print("Translation direction t:\n", results["t"].ravel())
+
+    inlier_pts_left = pts_left[results["inlier_mask"]]
+    inlier_pts_right = pts_right[results["inlier_mask"]]
+
+    rectification = rectify_stereo_images(
+        left_image_path=left,
+        right_image_path=right,
+        F=results["F"],
+        pts_left=inlier_pts_left,
+        pts_right=inlier_pts_right,
+        output_dir="images",
+    )
+
+    print("Rectification homography H1:\n", rectification["H1"])
+    print("Rectification homography H2:\n", rectification["H2"])
