@@ -88,6 +88,14 @@ def _winner_takes_all(volume: np.ndarray, min_disparity: int) -> np.ndarray:
     return disparity_map
 
 
+def _apply_median_filter(disparity: np.ndarray, filter_size: int) -> np.ndarray:
+    if filter_size <= 1:
+        return disparity
+    if filter_size % 2 == 0:
+        raise ValueError("median_filter_size must be odd.")
+    return cv2.medianBlur(disparity, filter_size)
+
+
 def _left_right_consistency_check(
     disp_left: np.ndarray,
     disp_right: np.ndarray,
@@ -163,6 +171,8 @@ def compute_disparity_map(
     max_disparity: int = 80,
     output_dir: str = "images",
     do_lr_check: bool = True,
+    median_filter_size: int = 5,
+    ignore_black_borders: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute a dense disparity map using NCC block matching.
@@ -194,15 +204,12 @@ def compute_disparity_map(
     left_gray  = cv2.cvtColor(left_bgr,  cv2.COLOR_BGR2GRAY)
     right_gray = cv2.cvtColor(right_bgr, cv2.COLOR_BGR2GRAY)
 
-    # Optionally down-scale for speed (can be disabled for final results)
-    h_orig, w_orig = left_gray.shape
-    scale          = 1.0                # set < 1.0 to speed up (e.g. 0.5)
-    if scale != 1.0:
-        new_w = int(w_orig * scale)
-        new_h = int(h_orig * scale)
-        left_gray  = cv2.resize(left_gray,  (new_w, new_h), interpolation=cv2.INTER_AREA)
-        right_gray = cv2.resize(right_gray, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        max_disparity = int(max_disparity * scale)
+    if max_disparity <= min_disparity:
+        raise ValueError("max_disparity must be greater than min_disparity.")
+
+    valid_input_mask = np.ones(left_gray.shape, dtype=bool)
+    if ignore_black_borders:
+        valid_input_mask = (left_gray > 2) & (right_gray > 2)
 
     print(f"[stereo_matching] Image size: {left_gray.shape[1]}x{left_gray.shape[0]}")
     print(f"[stereo_matching] Window size: {window_size}x{window_size}")
@@ -213,6 +220,7 @@ def compute_disparity_map(
     vol_l2r    = _ncc_cost_volume(left_gray, right_gray,
                                   window_size, min_disparity, max_disparity)
     disp_left  = _winner_takes_all(vol_l2r, min_disparity)
+    disp_left = _apply_median_filter(disp_left, median_filter_size)
 
     reliability_mask = np.ones(left_gray.shape, dtype=bool)  # default: all valid
 
@@ -222,11 +230,17 @@ def compute_disparity_map(
         vol_r2l    = _ncc_cost_volume(right_gray, left_gray,
                                       window_size, min_disparity, max_disparity)
         disp_right = _winner_takes_all(vol_r2l, min_disparity)
+        disp_right = _apply_median_filter(disp_right, median_filter_size)
         reliability_mask = _left_right_consistency_check(disp_left, disp_right, threshold=1)
+        reliability_mask &= valid_input_mask
         n_valid    = reliability_mask.sum()
-        n_total    = reliability_mask.size
+        n_total    = valid_input_mask.sum() if ignore_black_borders else reliability_mask.size
         print(f"[stereo_matching] L-R consistent pixels: "
               f"{n_valid}/{n_total} ({100*n_valid/n_total:.1f}%)")
+    else:
+        reliability_mask = valid_input_mask.copy()
+
+    disp_left[~valid_input_mask] = 0
 
     # ---- Save outputs ----
     os.makedirs(output_dir, exist_ok=True)

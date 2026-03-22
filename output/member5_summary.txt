@@ -1,0 +1,16 @@
+Member 5 reused the Member 3 stereo matching code.
+Stereo matcher: NCC block matching
+Window size: 11
+Disparity range: [0, 48)
+Median filter size: 5
+Original disparity outputs: images
+Rectified disparity outputs: output
+Rectified left image: images/rectified_left.png
+Rectified right image: images/rectified_right.png
+Cropped rectified left image: output/rectified_left_cropped.png
+Cropped rectified right image: output/rectified_right_cropped.png
+Overlap crop box: x=0:431, y=0:375
+Before rectification valid ratio: 6.22%
+After rectification valid ratio: 22.88%
+Absolute improvement: 16.66 percentage points
+Relative improvement factor: 3.68x
